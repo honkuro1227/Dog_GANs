@@ -171,6 +171,10 @@ colorize_sobel = lib.colorize_sobel
 colorize_sobel.argtypes = [IMAGE]
 colorize_sobel.restype = IMAGE
 
+cc_images = lib.cc_images
+cc_images.argtypes = [IMAGE,IMAGE]
+cc_images.restype = IMAGE
+
 make_gaussian_filter = lib.make_gaussian_filter
 make_gaussian_filter.argtypes = [c_float]
 make_gaussian_filter.restype = IMAGE

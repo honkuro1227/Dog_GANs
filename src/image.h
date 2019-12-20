@@ -90,6 +90,7 @@ void l1_normalize(image im);
 void threshold_image(image im, float thresh);
 image *sobel_image(image im);
 image colorize_sobel(image im);
+image cc_images(image edge,image ori);
 image smooth_image(image im, float sigma);
 
 // Harris and Stitching

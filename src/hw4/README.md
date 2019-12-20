@@ -38,7 +38,7 @@ Try calculating the optical flow between two dog images:
 
 It may look something like:
 
-![](../../figs/lines.png)
+![](../../figs/lines.jpg)
 
 ## 4.4 Optical flow demo using OpenCV ## 
 

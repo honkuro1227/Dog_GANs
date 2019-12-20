@@ -1,8 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "image.h"
 #include "matrix.h"
 
@@ -10,45 +11,64 @@
 // image im: image to draw line on
 // float x, y: starting point of line
 // float dx, dy: vector corresponding to line angle and magnitude
-void draw_line(image im, float x, float y, float dx, float dy)
-{
-    assert(im.c == 3);
-    float angle = 6*(atan2(dy, dx) / TWOPI + .5);
-    int index = floor(angle);
-    float f = angle - index;
-    float r, g, b;
-    if(index == 0){
-        r = 1; g = f; b = 0;
-    } else if(index == 1){
-        r = 1-f; g = 1; b = 0;
-    } else if(index == 2){
-        r = 0; g = 1; b = f;
-    } else if(index == 3){
-        r = 0; g = 1-f; b = 1;
-    } else if(index == 4){
-        r = f; g = 0; b = 1;
-    } else {
-        r = 1; g = 0; b = 1-f;
-    }
-    float i;
-    float d = sqrt(dx*dx + dy*dy);
-    for(i = 0; i < d; i += 1){
-        int xi = x + dx*i/d;
-        int yi = y + dy*i/d;
-        set_pixel(im, xi, yi, 0, r);
-        set_pixel(im, xi, yi, 1, g);
-        set_pixel(im, xi, yi, 2, b);
-    }
+void draw_line(image im, float x, float y, float dx, float dy) {
+  assert(im.c == 3);
+  float angle = 6 * (atan2(dy, dx) / TWOPI + .5);
+  int index = floor(angle);
+  float f = angle - index;
+  float r, g, b;
+  if (index == 0) {
+    r = 1;
+    g = f;
+    b = 0;
+  } else if (index == 1) {
+    r = 1 - f;
+    g = 1;
+    b = 0;
+  } else if (index == 2) {
+    r = 0;
+    g = 1;
+    b = f;
+  } else if (index == 3) {
+    r = 0;
+    g = 1 - f;
+    b = 1;
+  } else if (index == 4) {
+    r = f;
+    g = 0;
+    b = 1;
+  } else {
+    r = 1;
+    g = 0;
+    b = 1 - f;
+  }
+  float i;
+  float d = sqrt(dx * dx + dy * dy);
+  for (i = 0; i < d; i += 1) {
+    int xi = x + dx * i / d;
+    int yi = y + dy * i / d;
+    set_pixel(im, xi, yi, 0, r);
+    set_pixel(im, xi, yi, 1, g);
+    set_pixel(im, xi, yi, 2, b);
+  }
 }
 
 // Make an integral image or summed area table from an image
 // image im: image to process
 // returns: image I such that I[x,y] = sum{i<=x, j<=y}(im[i,j])
-image make_integral_image(image im)
-{
-    image integ = make_image(im.w, im.h, im.c);
-    // TODO: fill in the integral image
-    return integ;
+image make_integral_image(image im) {
+  image integ = make_image(im.w, im.h, im.c);
+  int x, y, c;
+  float value;
+  for (c = 0; c < im.c; c++) {
+    for (y = 0; y < im.h; y++) {
+      for (x = 0; x < im.w; x++) {
+        value=get_pixel(im,x,y,c)+get_pixel(integ,x-1,y,c)+get_pixel(integ,x,y-1,c)-get_pixel(integ,x-1,y-1,c);
+        set_pixel(integ,x,y,c,value);
+      }
+    }
+  }
+  return integ;
 }
 
 // Apply a box filter to an image using an integral image for speed
@@ -57,13 +77,22 @@ image make_integral_image(image im)
 // returns: smoothed image
 image box_filter_image(image im, int s)
 {
-    int i,j,k;
+    int x,y,c;
     image integ = make_integral_image(im);
     image S = make_image(im.w, im.h, im.c);
     // TODO: fill in S using the integral image.
+    for( c=0;c<im.c;c++){
+        for( x=0; x<im.w;x++){
+            for( y=0;y<im.h;y++){
+                float v=get_pixel(integ,x+s-1,y+s-1,c)-get_pixel(integ,x+s-1,y-1,c)-get_pixel(integ,x-1,y+s-1,c)+get_pixel(integ,x-1,y-1,c);
+                set_pixel(S,x,y,c,v/s/s);
+            }
+
+        }
+    }
+    free_image(integ);
     return S;
 }
-
 // Calculate the time-structure matrix of an image pair.
 // image im: the input image.
 // image prev: the previous image in sequence.
@@ -72,7 +101,7 @@ image box_filter_image(image im, int s)
 //          3rd channel is IxIy, 4th channel is IxIt, 5th channel is IyIt.
 image time_structure_matrix(image im, image prev, int s)
 {
-    int i;
+
     int converted = 0;
     if(im.c == 3){
         converted = 1;
@@ -81,13 +110,34 @@ image time_structure_matrix(image im, image prev, int s)
     }
 
     // TODO: calculate gradients, structure components, and smooth them
+    image S=make_image(im.w,im.h,5);
+    image gx_filter = make_gx_filter();
+    image gy_filter = make_gy_filter();
 
-    image S;
+    image Ix=convolve_image(im,gx_filter,0);
+    image Iy=convolve_image(im,gy_filter,0);
 
+    free_image(gx_filter);
+    free_image(gy_filter);
+
+    for (int x=0;x<im.w;x++){
+        for(int y=0;y<im.h;y++){
+            set_pixel(S,x,y,0,get_pixel(Ix,x,y,0)*get_pixel(Ix,x,y,0));
+            set_pixel(S,x,y,1,get_pixel(Iy,x,y,0)*get_pixel(Iy,x,y,0));
+            set_pixel(S,x,y,2,get_pixel(Ix,x,y,0)*get_pixel(Iy,x,y,0));
+            set_pixel(S,x,y,3,get_pixel(Ix,x,y,0)*(get_pixel(im,x,y,0)-get_pixel(prev,x,y,0)));
+            set_pixel(S,x,y,4,get_pixel(Iy,x,y,0)*(get_pixel(im,x,y,0)-get_pixel(prev,x,y,0)));
+        }
+    }
+    free_image(Iy);
+    free_image(Ix);
+    //printf("OK");
     if(converted){
         free_image(im); free_image(prev);
     }
-    return S;
+    image re = box_filter_image(S, s);
+    free_image(S);
+    return re;
 }
 
 // Calculate the velocity given a structure image
@@ -95,9 +145,11 @@ image time_structure_matrix(image im, image prev, int s)
 // int stride: only calculate subset of pixels for speed
 image velocity_image(image S, int stride)
 {
+
     image v = make_image(S.w/stride, S.h/stride, 3);
     int i, j;
     matrix M = make_matrix(2,2);
+    matrix result;
     for(j = (stride-1)/2; j < S.h; j += stride){
         for(i = (stride-1)/2; i < S.w; i += stride){
             float Ixx = S.data[i + S.w*j + 0*S.w*S.h];
@@ -107,11 +159,29 @@ image velocity_image(image S, int stride)
             float Iyt = S.data[i + S.w*j + 4*S.w*S.h];
 
             // TODO: calculate vx and vy using the flow equation
-            float vx = 0;
-            float vy = 0;
+            M.data[0][0]=Ixx;
+            M.data[0][1]=Ixy;
+            M.data[1][0]=Ixy;
+            M.data[1][1]=Iyy;
 
+            matrix V=make_matrix(2,1);
+            V.data[0][0]=-Ixt;
+            V.data[1][0]=-Iyt;
+
+            matrix Minvert=matrix_invert(M);
+            if (Minvert.data) {
+                result = matrix_mult_matrix(Minvert, V);
+                free_matrix(Minvert);
+            } else {
+                result = make_matrix(2, 1);
+                result.data[0][0] = 0;
+                result.data[1][0] = 0;
+            }
+            float vx = result.data[0][0];
+            float vy = result.data[1][0];
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
+
         }
     }
     free_matrix(M);
@@ -158,7 +228,8 @@ void constrain_image(image im, float v)
 // returns: velocity matrix
 image optical_flow_images(image im, image prev, int smooth, int stride)
 {
-    image S = time_structure_matrix(im, prev, smooth);   
+
+    image S = time_structure_matrix(im, prev, smooth);
     image v = velocity_image(S, stride);
     constrain_image(v, 6);
     image vs = smooth_image(v, 2);
@@ -174,8 +245,8 @@ image optical_flow_images(image im, image prev, int smooth, int stride)
 void optical_flow_webcam(int smooth, int stride, int div)
 {
 #ifdef OPENCV
-    void * cap;
-    cap = open_video_stream(0, 0, 1280, 720, 30);
+    CvCapture * cap;
+    cap = cvCaptureFromCAM(0);
     image prev = get_image_from_stream(cap);
     image prev_c = nn_resize(prev, prev.w/div, prev.h/div);
     image im = get_image_from_stream(cap);
